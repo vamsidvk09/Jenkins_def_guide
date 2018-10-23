@@ -1,0 +1,18 @@
+def version =new Date().format("EEE").toLowerCase()
+def ant = new AntBuilder()
+def homeDir = build.environment.JENKINS_HOME
+def backupDir = build.environment.WORKSPACE
+def backupFile = "jenkins_backup_" + version + ".zip"
+def tempDir = new File(backupDir + File.separatorChar  + "temp")
+tempDir.mkdir()
+def zipFile = new File(tempDir.absolutePath + File.separatorChar + backupFile)
+zipFile.delete()
+ant.zip( destFile: zipFile.absolutePath, {
+    fileset dir: homeDir, excludes: '.java/**, .jenkins/**, .m2/**, cache/**, fingerprints/**, logs/**, monitoring/**, tools/**, war/**, workspace/**, plugins/**, jobs/**, jenkins.war.bak, jre/**, *.log'
+    fileset dir: homeDir, includes: 'plugins/*.*'
+    fileset dir: homeDir, includes: 'jobs/**', excludes: '**/builds/**, **/last*/**, **/workspace/**' 
+}
+)
+ant.copy(file: zipFile.absolutePath, todir: backupDir, overwrite: "true")
+zipFile.delete()
+tempDir.delete()

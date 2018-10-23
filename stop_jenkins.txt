@@ -1,0 +1,13 @@
+#!/bin/sh
+PIDFILE=/app/jenkins_exec/jenkins.pid
+
+if [ -f $PIDFILE ]; then
+    PID=`cat $PIDFILE`
+        echo "Terminating Jenkins Process ($PID)"
+        kill -9 $PID
+        echo "Deleting Jenkins PID File"
+        rm -f $PIDFILE
+        echo "Jenkins Stop Process End"
+else
+    printf "%s\n" "PID File not found... exiting"
+fi

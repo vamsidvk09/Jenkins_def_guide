@@ -1,0 +1,67 @@
+root:g2902usdljen01v jenkins_exec # cat startjenkins.sh
+#!/bin/sh
+########################
+# Note: This script is executed as root with
+#       the command "service jenkins start"
+# Author: Julia Reyes
+#######################
+
+JENKINS_HOME=/app/jenkins
+LOGFILE=/app/jenkins_exec/logs/jenkins.log
+JENKINS_WAR=/app/jenkins_exec
+HTTP_PORT=-1
+HTTPS_PORT=9443
+HTTPS_KEYSTORE=$JENKINS_WAR/Cert/Jenkins.jks
+PIDFILE=/app/jenkins_exec/jenkins.pid
+
+start_command()
+{
+    cmd="nohup java -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -DJENKINS_HOME=$JENKINS_HOME -Xms512m -Xmx1024m -XX:PermSize=512m -XX:MaxPermSize=512m -jar $JENKINS_WAR/jenkins.war --httpPort=$HTTP_PORT --httpsPort=$HTTPS_PORT --httpsKeyStore=$HTTPS_KEYSTORE --httpsKeyStorePassword=changeit --prefix=/jenkins > $LOGFILE 2>&1 &"
+    echo $cmd
+    nohup java -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -DJENKINS_HOME=$JENKINS_HOME -Xrs -Xms512m -Xmx1024m -XX:PermSize=512m -XX:MaxPermSize=512m -jar $JENKINS_WAR/jenkins.war --httpPort=$HTTP_PORT --httpsPort=$HTTPS_PORT --httpsKeyStore=$HTTPS_KEYSTORE --httpsKeyStorePassword=changeit --prefix=/jenkins > $LOGFILE 2>&1 &
+    # Saving jenkins PID to file
+    echo $! > $PIDFILE 2>&1 &
+    sleep 3
+    if [ -f $PIDFILE ]; then
+        PID=`cat $PIDFILE`
+        echo "Jenkins process started ($PID)"
+    else
+        echo "After start command PIDFILE doesn't exits, check the startup process."
+    fi
+}
+
+echo "Jenkins Start up process..."
+if [ -f $PIDFILE ]; then
+    echo "Jenkins PIDFILE already exist, checking PIDFILE content."
+    PID=`cat $PIDFILE`
+    if [[ ! -z $PID ]];then
+        echo "Jenkins PIDFILE is not empty, checking if jenkins process is alive."
+        if ps -p $PID > /dev/null; then
+            echo "Jenkins process PID ($PID) is already running... Exiting"
+        else
+            echo "Jenkins process PID ($PID) is not running, starting Jenkins process."
+            start_command
+        fi
+    else
+        echo "Jenkins PIDFILE is empty, checking that jenkins process is running..."
+        PID=`pgrep -f "java -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -DJENKINS_HOME=/app/jenkins -Xrs"`
+        if [[ ! -z $PID ]]; then
+            echo "Jenkins process is alive, saving PID ($PID) into PIDFile and exiting..."
+            echo $PID > $PIDFILE
+        else
+            echo "Jenkins process is not running, starting new Jenkins process."
+            start_command
+        fi
+    fi
+else
+    echo "Jenkins PIDFILE doesn't exist, cheking if jenkins process is running..."
+    PID=`pgrep -f "java -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -DJENKINS_HOME=/app/jenkins -Xrs"`
+    if [[ ! -z $PID ]]; then
+        echo "Jenkins process is alive, saving PID ($PID) into PIDFile and exiting..."
+        echo $PID > $PIDFILE
+    else
+        echo "Jenkins process is not running, starting new Jenkins process..."
+        start_command
+    fi
+fi
+exit 0
