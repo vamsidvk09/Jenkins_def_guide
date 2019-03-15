@@ -1,0 +1,85 @@
+#!/bin/sh
+# chkconfig: 2345 95 10
+# Description: Jenkins Treasury server daemon
+#
+# /etc/init.d/jenkins
+# author: Julia Reyes (502178507)
+#
+# Process Name to identify process
+NAME=jenkins
+#  User under which this service will run as
+RUN_AS=root
+# Lock file name and location
+LOCKFILE=/var/lock/subsys/jenkins
+# Startup scripts
+STARTUP=/app/jenkins_exec/startjenkins.sh
+SHUTDOWN=/app/jenkins_exec/stopjenkins.sh
+
+#Adding environment variables
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-oracle.x86_64
+export PATH=$PATH:$JAVA_HOME/bin
+
+# Source function library.
+. /etc/init.d/functions
+
+start_jenkins() {
+    echo .Starting Jenkins Treasury services..
+    su $RUN_AS -c "/bin/bash $STARTUP"
+    RETVAL=$?
+    if [ ${RETVAL} -eq 0 ]; then
+      touch ${LOCKFILE}
+      echo "End of Start Jenkins Treasury service"
+      success
+    else
+      failure
+    fi
+    echo
+    return ${RETVAL}
+}
+
+stop_jenkins() {
+    echo .Stopping Jenkins services..
+    su $RUN_AS -c "/bin/bash $SHUTDOWN"
+    RETVAL=$?
+    if [ ${RETVAL} -eq 0 ]; then
+      rm -f ${LOCKFILE}
+      echo "End of Stop Jenkins Treasury service"
+      success
+    else
+     failure
+    fi
+    echo
+    return ${RETVAL}
+}
+
+status_jenkins() {
+    # Check for any other process containing jenkins.war and jenkins
+    numproc=`ps -ef | grep [j]enkins.war | grep $NAME | wc -l`
+    if [ $numproc -ne 0 ]; then
+        echo "Jenkins is running"
+    else
+        echo .Jenkins Treasury is NOT running..
+    fi
+}
+
+case $1 in
+        start)
+        start_jenkins
+        ;;
+        stop)
+        stop_jenkins
+        ;;
+        status)
+        status_jenkins
+        ;;
+        restart)
+        stop_jenkins
+        sleep 1
+        start_jenkins
+        ;;
+        *)
+        echo "usage: $NAME {start|stop|restart}"
+        exit 1
+        ;;
+esac
+exit 0
